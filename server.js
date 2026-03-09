@@ -14,7 +14,7 @@ app.use(cors());
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 app.post('/api/generate-simulation', async (req, res) => {
   try {
-    const { prompt, imageBase64 } = req.body;
+    const { prompt } = req.body; 
     const model = genAI.getGenerativeModel({ 
       model: "gemini-2.5-flash", //MODEL
       generationConfig: { responseMimeType: "application/json" } 
@@ -42,17 +42,8 @@ app.post('/api/generate-simulation', async (req, res) => {
 `;//รอเขียน prompt
     let aiParts = [
       { text: systemi },
-      { text: prompt ? `โจทย์คือ: ${prompt}` : "จงวิเคราะห์โจทย์จากรูปภาพนี้" }
+      { text: prompt ? `โจทย์คือ: ${prompt}` : "จงวิเคราะห์โจทย์" }
     ];
-
-    if (imageBase64) {
-      aiParts.push({
-        inlineData: {
-          data: imageBase64,
-          mimeType: "image/jpeg"
-        }
-      });
-    }
 
     console.log("AI วิเคราะห์โจทย์");
     
