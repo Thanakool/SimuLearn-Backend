@@ -1,8 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-// import { GoogleGenerativeAI } from '@google/generative-ai';
-import OpenAI from "openai"; 
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
 dotenv.config();
 
@@ -12,11 +11,14 @@ app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(cors());
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 app.post('/api/generate-simulation', async (req, res) => {
   try {
     const { prompt, imageBase64 } = req.body;
+    const model = genAI.getGenerativeModel({ 
+      model: "gemini-1.5-flash-8b", //MODEL
+      generationConfig: { responseMimeType: "application/json" } 
+    });
 
     const systemi = ` 
       คุณคือผู้เชี่ยวชาญด้านฟิสิกส์ วิเคราะห์โจทย์และตอบกลับเป็น JSON เท่านั้น
@@ -24,36 +26,32 @@ app.post('/api/generate-simulation', async (req, res) => {
       JSON Schema:
       {
         "variables": {
-          "gravity": number,
-          "velocity": number,
-          "angle": number,
-          "mass": number
+          "gravity": 9.8,
+          "velocity": 0,
+          "angle": 0,
+          "mass": 1 
         },
         "description": "คำอธิบายสั้นๆ 1 ประโยคว่าเหตุการณ์นี้คืออะไร (ภาษาไทย)"
       }
     `;
-
-    let messageContent = [
-      { type: "text", text: systemi },
-      { type: "text", text: prompt ? `โจทย์คือ: ${prompt}` : "จงวิเคราะห์โจทย์จากรูปภาพนี้" }
+    let aiParts = [
+      { text: systemi },
+      { text: prompt ? `โจทย์คือ: ${prompt}` : "จงวิเคราะห์โจทย์จากรูปภาพนี้" }
     ];
 
     if (imageBase64) {
-      messageContent.push({
-        type: "image_url",
-        image_url: { url: `data:image/jpeg;base64,${imageBase64}` }
+      aiParts.push({
+        inlineData: {
+          data: imageBase64,
+          mimeType: "image/jpeg"
+        }
       });
     }
 
-    console.log("กำลังให้ AI (OpenAI) วิเคราะห์โจทย์...");
+    console.log("กำลังให้ AI วิเคราะห์โจทย์...");
     
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [{ role: "user", content: messageContent }],
-      response_format: { type: "json_object" } 
-    });
-
-    const jsonResponse = JSON.parse(response.choices[0].message.content);
+    const result = await model.generateContent(aiParts);
+    const jsonResponse = JSON.parse(result.response.text());
 
     console.log("ให้หน้าเว็บ");
     res.json(jsonResponse);
@@ -66,5 +64,5 @@ app.post('/api/generate-simulation', async (req, res) => {
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, '0.0.0.0', () => { 
-  console.log(`✅ Backend รันแล้วที่ IP: http://:${PORT}`); 
+  console.log(`✅ Backend รันแล้วที่ Port: ${PORT}`); 
 });
