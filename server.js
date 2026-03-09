@@ -1,7 +1,8 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+// import { GoogleGenerativeAI } from '@google/generative-ai';
+import OpenAI from "openai"; 
 
 dotenv.config();
 
@@ -11,52 +12,50 @@ app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(cors());
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
 app.post('/api/generate-simulation', async (req, res) => {
   try {
     const { prompt, imageBase64 } = req.body;
-    const model = genAI.getGenerativeModel({ 
-      model: "gemini-2.0-flash", //MODEL
-      generationConfig: { responseMimeType: "application/json" } 
-    });
-    //prompt
+
     const systemi = ` 
-      คุณคือผู้เชี่ยวชาญด้านฟิสิกส์ บลา ๆๆๆ
+      คุณคือผู้เชี่ยวชาญด้านฟิสิกส์ วิเคราะห์โจทย์และตอบกลับเป็น JSON เท่านั้น
 
       JSON Schema:
       {
         "variables": {
-          "gravity": Num,
-          "velocity": Num,
-          "angle": Num,
-          "mass": Num หน่วยด้วย
+          "gravity": number,
+          "velocity": number,
+          "angle": number,
+          "mass": number
         },
         "description": "คำอธิบายสั้นๆ 1 ประโยคว่าเหตุการณ์นี้คืออะไร (ภาษาไทย)"
       }
     `;
 
-    let aiParts = [
-      { text: systemi },
-      { text: prompt ? `โจทย์คือ: ${prompt}` : "จงวิเคราะห์โจทย์จากรูปภาพนี้" }
+    let messageContent = [
+      { type: "text", text: systemi },
+      { type: "text", text: prompt ? `โจทย์คือ: ${prompt}` : "จงวิเคราะห์โจทย์จากรูปภาพนี้" }
     ];
 
     if (imageBase64) {
-      aiParts.push({
-        inlineData: {
-          data: imageBase64,
-          mimeType: "image/jpeg"
-        }
+      messageContent.push({
+        type: "image_url",
+        image_url: { url: `data:image/jpeg;base64,${imageBase64}` }
       });
     }
 
-    console.log("กำลังให้ AI วิเคราะห์โจทย์...");
+    console.log("กำลังให้ AI (OpenAI) วิเคราะห์โจทย์...");
     
-    // ยิงไปหา Google
-    const result = await model.generateContent(aiParts);
-    const jsonResponse = JSON.parse(result.response.text());
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [{ role: "user", content: messageContent }],
+      response_format: { type: "json_object" } 
+    });
+
+    const jsonResponse = JSON.parse(response.choices[0].message.content);
 
     console.log("ให้หน้าเว็บ");
-
     res.json(jsonResponse);
 
   } catch (error) {
