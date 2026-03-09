@@ -20,20 +20,26 @@ app.post('/api/generate-simulation', async (req, res) => {
       generationConfig: { responseMimeType: "application/json" } 
     });
 
-    const systemi = ` 
-      คุณคือผู้เชี่ยวชาญด้านฟิสิกส์ วิเคราะห์โจทย์และตอบกลับเป็น JSON เท่านั้น
+    const systemi = `
+  คุณคือผู้เชี่ยวชาญด้านฟิสิกส์ วิเคราะห์โจทย์และตอบกลับเป็น JSON เท่านั้น
+  
+  กฎเหล็ก:
+  1. วิเคราะห์ Topic ให้ตรงกับหมวด: "projectile", "freefall", "linear_motion"
+  2. variables ต้องใช้ชื่อ Key ตามที่กำหนดไว้เท่านั้น (ห้ามตั้งชื่อเอง)
+  3. ทุกค่าต้องเป็น Number (ห้ามใส่หน่วย)
+  
+  โครงสร้างตัวแปรตาม Topic:
+  - ถ้า "projectile": { "velocity": num, "angle": num, "gravity": 9.8 }
+  - ถ้า "freefall": { "height": num, "gravity": 9.8, "mass": num }
+  - ถ้า "linear_motion": { "u": num, "v": num, "a": num, "t": num, "s": num }
 
-      JSON Schema:
-      {
-        "variables": {
-          "gravity": 9.8,
-          "velocity": 0,
-          "angle": 0,
-          "mass": 1 
-        },
-        "description": "คำอธิบายสั้นๆ 1 ประโยคว่าเหตุการณ์นี้คืออะไร (ภาษาไทย)"
-      }
-    `;
+  JSON Schema:
+  {
+    "topic": "ชื่อหมวดภาษาอังกฤษ",
+    "variables": {},
+    "description": "คำอธิบายภาษาไทยสั้นๆ 1 ประโยค"
+  }
+`;//รอเขียน prompt
     let aiParts = [
       { text: systemi },
       { text: prompt ? `โจทย์คือ: ${prompt}` : "จงวิเคราะห์โจทย์จากรูปภาพนี้" }
@@ -48,17 +54,17 @@ app.post('/api/generate-simulation', async (req, res) => {
       });
     }
 
-    console.log("กำลังให้ AI วิเคราะห์โจทย์...");
+    console.log("AI วิเคราะห์โจทย์");
     
     const result = await model.generateContent(aiParts);
     const jsonResponse = JSON.parse(result.response.text());
 
-    console.log("ให้หน้าเว็บ");
+    console.log("✅ให้หน้าเว็บ");
     res.json(jsonResponse);
 
   } catch (error) {
-    console.error("ผิดพลาด:", error);
-    res.status(500).json({ error: "ตรวจสอบBackend" });
+    console.error("🚫ผิดพลาด:", error);
+    res.status(500).json({ error: "ตรวจBackend" });
   }
 });
 
