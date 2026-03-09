@@ -20,7 +20,7 @@ app.post('/api/generate-simulation', async (req, res) => {
       generationConfig: { responseMimeType: "application/json" } 
     });
     //prompt
-    const systemInstruction = ` 
+    const systemi = ` 
       คุณคือผู้เชี่ยวชาญด้านฟิสิกส์ บลา ๆๆๆ
 
       JSON Schema:
@@ -36,7 +36,7 @@ app.post('/api/generate-simulation', async (req, res) => {
     `;
 
     let aiParts = [
-      { text: systemInstruction },
+      { text: systemi },
       { text: prompt ? `โจทย์คือ: ${prompt}` : "จงวิเคราะห์โจทย์จากรูปภาพนี้" }
     ];
 
