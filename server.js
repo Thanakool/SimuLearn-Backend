@@ -16,7 +16,7 @@ app.post('/api/generate-simulation', async (req, res) => {
   try {
     const { prompt, imageBase64 } = req.body;
     const model = genAI.getGenerativeModel({ 
-      model: "gemini-1.5-flash", //MODEL
+      model: "gemini-1.5-flash-latest", //MODEL
       generationConfig: { responseMimeType: "application/json" } 
     });
 
