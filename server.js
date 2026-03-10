@@ -2,9 +2,9 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import admin from 'firebase-admin'; // นำเข้า admin เพื่อใช้ทำเวลา
-import db from './db.js'; // 💡 ดึงการเชื่อมต่อ DB มาใช้
-import historyRoute from './historyRoute.js'; // 💡 ดึง API ประวัติมาใช้
+import admin from 'firebase-admin';
+import db from './db.js'; 
+import historyRoute from './historyRoute.js'; //  ดึง API
 
 dotenv.config();
 
@@ -14,7 +14,6 @@ app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(cors());
 
-// 💡 เสียบ API ประวัติเข้าไปที่ /api/history
 app.use('/api/history', historyRoute);
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
@@ -83,10 +82,10 @@ AI: { "topic": "freefall", "variables": { "u": 5, "v": null, "g": 9.8, "t": 3, "
         });
         console.log(`💾 บันทึก ${userId} เรียบร้อย!`);
       } catch (dbError) {
-        console.error("⚠️ บันทึก Database ไม่สำเร็จ:", dbError);
+        console.error("⚠️ บันทึกไม่สำเร็จ:", dbError);
       }
     } else {
-      console.log("🛑(Guest) -> ไม่บันทึกประวัติ");
+      console.log("🛑(Guest)ไม่บันทึกประวัติ");
     }
 
     console.log("✅ให้หน้าเว็บ");
