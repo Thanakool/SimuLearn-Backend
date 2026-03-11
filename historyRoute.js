@@ -1,30 +1,32 @@
 import express from 'express';
-import db from './db.js'; // ดึง db
+import db from './db.js';
 
 const router = express.Router();
 
-router.get('/', async (req, res) => {
+router.get('/:userId', async (req, res) => {
   try {
-    const { userId } = req.query;
-
-    if (!userId) {
-      return res.status(400).json({ error: "ต้องระบุ userId ใน URL" });
-    }
+    const { userId } = req.params;
+    console.log(`🔍 กำลังดึงประวัติ ${userId}`);
 
     const snapshot = await db.collection('simulation_history')
-                             .where('userId', '==', userId)
-                             .orderBy('timestamp', 'desc')
-                             .get();
-    
-    let historyList = [];
+      .where('userId', '==', userId)
+      .orderBy('timestamp', 'desc')
+      .get();
+
+    if (snapshot.empty) {
+      return res.json([]);
+    }
+
+    const history = [];
     snapshot.forEach(doc => {
-      historyList.push({ id: doc.id, ...doc.data() });
+      history.push({ id: doc.id, ...doc.data() });
     });
 
-    res.json(historyList);
+    console.log(`✅ ส่งประวัติให้บอสแล้ว ${history.length} รายการ`);
+    res.json(history);
   } catch (error) {
-    console.error("ดึงไม่ได้:", error);
-    res.status(500).json({ error: "ไม่สามารถดึงได้" });
+    console.error("🚫 หลังบ้านดึงประวัติพลาด:", error);
+    res.status(500).json({ error: "เกิดข้อผิดพลาดในการดึงข้อมูล" });
   }
 });
 
