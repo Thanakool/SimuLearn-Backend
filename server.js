@@ -142,25 +142,23 @@ AI:
     }
 
     if (userId) {
-      try {
-        await db.collection('simulation_history').add({
-          userId: userId, 
-          original_prompt: prompt || "ไม่ระบุโจทย์",
-          topic_type: finalData.type,
-          ai_description: finalData.description,
-          calculated_variables: finalData.variables,
-          timestamp: admin.firestore.FieldValue.serverTimestamp()
-        });
-        console.log(`💾 บันทึก ${userId} เรียบร้อย!`);
-      } catch (dbError) {
-        console.error("⚠️ไม่สำเร็จ:", dbError);
-      }
-    } else {
-      console.log("🛑(Guest)ไม่บันทึกประวัติ");
-    }
+  // สั่งเซฟทิ้งไว้เลย ไม่ต้องใส่ await (มันจะทำงานเป็น Background Task)
+  db.collection('simulation_history').add({
+    userId: userId,
+    original_prompt: prompt || "ไม่ระบุโจทย์",
+    topic_type: finalData.type,
+    ai_description: finalData.description,
+    calculated_variables: finalData.variables,
+    timestamp: admin.firestore.FieldValue.serverTimestamp()
+  }).then(() => {
+    console.log(`💾 บันทึก ${userId} สำเร็จแบบ Background!`);
+  }).catch(dbError => {
+    console.error("⚠️ เซฟประวัติพลาด:", dbError);
+  });
+}
 
-    console.log(`✅ ให้หน้าเว็บ (${finalData.type})`);
-    res.json(finalData);
+// 🚀 ส่งคำตอบให้บอสทันที! ไม่ต้องรอเซฟเสร็จ
+res.json(finalData);
 
   } catch (error) {
     console.error("🚫ผิดพลาด:", error);
