@@ -169,6 +169,9 @@ AI:
 });
 
 const PORT = process.env.PORT || 5000;
+app.get('/', (req, res) => {
+  res.send('🚀 SimuLearn Backend is running perfectly on Render!');
+});
 app.listen(PORT, '0.0.0.0', () => { 
   console.log(`✅ Backend รันที่ Port: ${PORT}`); 
 });
