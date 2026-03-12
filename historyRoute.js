@@ -6,14 +6,14 @@ const router = express.Router();
 router.get('/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
-    console.log(`🔍 กำลังดึงประวัติ ${userId}`);
-
-    const snapshot = await db.collection('simulation_history')
+    console.log(`🔍 กำลังดึงประวัติของบอส ID: ${userId}`);
+    const snapshot = await db.collection('simulations')
       .where('userId', '==', userId)
-      .orderBy('timestamp', 'desc')
+      .orderBy('createdAt', 'desc') // 💡 ใช้ createdAt ให้ตรงกับระบบใหม่
       .get();
 
     if (snapshot.empty) {
+      console.log(`📭 ไม่พบประวัติสำหรับ ID: ${userId}`);
       return res.json([]);
     }
 
@@ -22,7 +22,7 @@ router.get('/:userId', async (req, res) => {
       history.push({ id: doc.id, ...doc.data() });
     });
 
-    console.log(`✅ ส่งประวัติให้บอสแล้ว ${history.length} รายการ`);
+    console.log(`✅ ดึงข้อมูลสำเร็จ! ส่งคืน ${history.length} รายการ`);
     res.json(history);
   } catch (error) {
     console.error("🚫 หลังบ้านดึงประวัติพลาด:", error);

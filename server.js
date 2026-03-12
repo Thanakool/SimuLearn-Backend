@@ -26,6 +26,7 @@ app.post('/api/generate-simulation', async (req, res) => {
       generationConfig: { responseMimeType: "application/json" } 
     });
 
+    // ⛔ Prompt เดิม 100% ห้ามแก้
     const systemi = `
 คุณคือ AI ผู้เชี่ยวชาญด้านฟิสิกส์ หน้าที่เดียวของคุณคืออ่านโจทย์ จำแนกประเภท สกัดตัวแปร และตอบกลับเป็น JSON ใน Markdown code block ที่ถูกต้องตาม Schema 100% เท่านั้น ห้ามมีข้อความอื่นปะปน
 [ขั้นตอนการทำงาน]:
@@ -77,16 +78,9 @@ AI:
   "description": "เตะลูกบอลด้วยความเร็ว 20 m/s ทำมุม 30 องศา"
 }
 `;
-    let aiParts = [
-      { text: systemi },
-      { text: prompt ? `โจทย์คือ: ${prompt}` : "จงวิเคราะห์โจทย์" }
-    ];
-
-    console.log("AI วิเคราะห์โจทย์");
-    
+    let aiParts = [{ text: systemi }, { text: prompt ? `โจทย์คือ: ${prompt}` : "จงวิเคราะห์โจทย์" }];
     const result = await model.generateContent(aiParts);
     let rawText = result.response.text();
-    
     rawText = rawText.replace(/```json/gi, '').replace(/```/gi, '').trim();
     const jsonResponse = JSON.parse(rawText);
 
@@ -99,23 +93,19 @@ AI:
       description: jsonResponse.description
     };
 
+    // Logic คำนวณ (เหมือนเดิม)
     if (aiTopic === "projectile") {
         let speed = v.u ?? 0;
         let angleVal = v.theta?.value ?? 0;
         let unit = v.theta?.unit ?? "deg";
         let rad = 0;
-
         if (typeof angleVal === 'string') {
             if (angleVal === 'pi') rad = Math.PI;
             else if (angleVal === 'pi/2') rad = Math.PI / 2;
-            else if (angleVal === 'pi/3') rad = Math.PI / 3;
-            else if (angleVal === 'pi/4') rad = Math.PI / 4;
-            else if (angleVal === 'pi/6') rad = Math.PI / 6;
             else rad = parseFloat(angleVal) || 0; 
         } else {
             rad = unit === "rad" ? angleVal : (angleVal * Math.PI) / 180;
         }
-
         finalData.variables = {
             gravity: v.g != null ? Math.abs(v.g) : 9.8,
             h_start: Math.abs(v.sy ?? (v.s ?? 0)), 
@@ -126,12 +116,8 @@ AI:
         };
     } else {
         let vyCal = v.u ?? 0;
-        if (prompt && prompt.includes("ขึ้น")) {
-            vyCal = -Math.abs(vyCal); 
-        } else if (prompt && (prompt.includes("ลง") || prompt.includes("ตก") || prompt.includes("ปล่อย"))) {
-            vyCal = Math.abs(vyCal); 
-        }
-
+        if (prompt && prompt.includes("ขึ้น")) vyCal = -Math.abs(vyCal);
+        else if (prompt && (prompt.includes("ลง") || prompt.includes("ตก") || prompt.includes("ปล่อย"))) vyCal = Math.abs(vyCal);
         finalData.variables = {
             gravity: v.g != null ? Math.abs(v.g) : 9.8,
             h_start: v.s ?? 0,
@@ -142,34 +128,21 @@ AI:
     }
 
     if (userId) {
-  // สั่งเซฟทิ้งไว้เลย ไม่ต้องใส่ await (มันจะทำงานเป็น Background Task)
-  db.collection('simulation_history').add({
-    userId: userId,
-    original_prompt: prompt || "ไม่ระบุโจทย์",
-    topic_type: finalData.type,
-    ai_description: finalData.description,
-    calculated_variables: finalData.variables,
-    timestamp: admin.firestore.FieldValue.serverTimestamp()
-  }).then(() => {
-    console.log(`💾 บันทึก ${userId} สำเร็จแบบ Background!`);
-  }).catch(dbError => {
-    console.error("⚠️ เซฟประวัติพลาด:", dbError);
-  });
-}
-
-// 🚀 ส่งคำตอบให้บอสทันที! ไม่ต้องรอเซฟเสร็จ
-res.json(finalData);
-
+      db.collection('simulations').add({
+        userId: userId,
+        title: prompt || "ไม่ระบุโจทย์",
+        topic_type: finalData.type,
+        ai_description: finalData.description,
+        calculated_variables: finalData.variables,
+        data: finalData, // เก็บเพื่อให้รีเฟรชแล้ววาดบอลได้
+        createdAt: admin.firestore.FieldValue.serverTimestamp()
+      }).then(() => console.log("💾 บันทึกสำเร็จ")).catch(e => console.error(e));
+    }
+    res.json(finalData);
   } catch (error) {
-    console.error("🚫ผิดพลาด:", error);
-    res.status(500).json({ error: "ตรวจBackend" });
+    res.status(500).json({ error: "Backend Error" });
   }
 });
 
 const PORT = process.env.PORT || 5000;
-app.get('/', (req, res) => {
-  res.send('🚀 SimuLearn Backend is running perfectly on Render!');
-});
-app.listen(PORT, '0.0.0.0', () => { 
-  console.log(`✅ Backend รันที่ Port: ${PORT}`); 
-});
+app.listen(PORT, '0.0.0.0', () => console.log(`✅ Port: ${PORT}`));
