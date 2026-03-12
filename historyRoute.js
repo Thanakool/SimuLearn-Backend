@@ -6,15 +6,28 @@ const router = express.Router();
 router.get('/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
+    console.log(`🔍 กำลังดึงประวัติของ ID: ${userId}`);
     const snapshot = await db.collection('simulations')
       .where('userId', '==', userId)
       .orderBy('createdAt', 'desc')
       .get();
 
+    if (snapshot.empty) {
+      console.log(`📭 ไม่พบประวัติสำหรับ ID: ${userId}`);
+      return res.json([]);
+    }
+
     const history = [];
-    snapshot.forEach(doc => { history.push({ id: doc.id, ...doc.data() }); });
+    snapshot.forEach(doc => {
+      history.push({ id: doc.id, ...doc.data() });
+    });
+
+    console.log(`✅ ดึงข้อมูลสำเร็จ! ส่งคืน ${history.length} รายการ`);
     res.json(history);
-  } catch (error) { res.status(500).json({ error: "Fetch History Error" }); }
+  } catch (error) {
+    console.error("🚫 หลังบ้านดึงประวัติพลาด:", error);
+    res.status(500).json({ error: "เกิดข้อผิดพลาดในการดึงข้อมูล" });
+  }
 });
 
 export default router;

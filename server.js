@@ -7,10 +7,13 @@ import db from './db.js';
 import historyRoute from './historyRoute.js'; 
 
 dotenv.config();
+
 const app = express();
+
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(cors());
+
 app.use('/api/history', historyRoute);
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
@@ -18,11 +21,11 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 app.post('/api/generate-simulation', async (req, res) => {
   try {
     const { prompt, userId } = req.body; 
+    console.log(`📩 New Request User: ${userId} | Prompt: ${prompt}`);
     const model = genAI.getGenerativeModel({ 
-      model: "gemini-3.1-flash-lite-preview",
+      model: "gemini-3.1-flash-lite-preview", //MODEL gemini-3.1-flash-lite-preview
       generationConfig: { responseMimeType: "application/json" } 
     });
-
     const systemi = `
 คุณคือ AI ผู้เชี่ยวชาญด้านฟิสิกส์ หน้าที่เดียวของคุณคืออ่านโจทย์ จำแนกประเภท สกัดตัวแปร และตอบกลับเป็น JSON ใน Markdown code block ที่ถูกต้องตาม Schema 100% เท่านั้น ห้ามมีข้อความอื่นปะปน
 [ขั้นตอนการทำงาน]:
@@ -75,6 +78,7 @@ AI:
 }
 `;
     let aiParts = [{ text: systemi }, { text: prompt ? `โจทย์คือ: ${prompt}` : "จงวิเคราะห์โจทย์" }];
+    console.log("🤖 กำลังรอ AI วิเคราะห์โจทย์...");
     const result = await model.generateContent(aiParts);
     let rawText = result.response.text();
     rawText = rawText.replace(/```json/gi, '').replace(/```/gi, '').trim();
@@ -89,7 +93,7 @@ AI:
       description: jsonResponse.description
     };
 
-    // --- Logic คำนวณเดิม ---
+    // Logic คำนวณ (เหมือนเดิม)
     if (aiTopic === "projectile") {
         let speed = v.u ?? 0;
         let angleVal = v.theta?.value ?? 0;
@@ -99,7 +103,9 @@ AI:
             if (angleVal === 'pi') rad = Math.PI;
             else if (angleVal === 'pi/2') rad = Math.PI / 2;
             else rad = parseFloat(angleVal) || 0; 
-        } else { rad = unit === "rad" ? angleVal : (angleVal * Math.PI) / 180; }
+        } else {
+            rad = unit === "rad" ? angleVal : (angleVal * Math.PI) / 180;
+        }
         finalData.variables = {
             gravity: v.g != null ? Math.abs(v.g) : 9.8,
             h_start: Math.abs(v.sy ?? (v.s ?? 0)), 
@@ -114,11 +120,13 @@ AI:
         else if (prompt && (prompt.includes("ลง") || prompt.includes("ตก") || prompt.includes("ปล่อย"))) vyCal = Math.abs(vyCal);
         finalData.variables = {
             gravity: v.g != null ? Math.abs(v.g) : 9.8,
-            h_start: v.s ?? 0, vx: 0, vy: vyCal, mass: v.mass ?? 1
+            h_start: v.s ?? 0,
+            vx: 0,
+            vy: vyCal,
+            mass: v.mass ?? 1
         };
     }
-
-    // ⭐ บันทึกลง 'simulations' (ถังเดียวกับหน้าบ้าน)
+    console.log("📦เตรียมส่งให้หน้าบ้าน:");
     if (userId) {
       db.collection('simulations').add({
         userId: userId,
@@ -126,13 +134,15 @@ AI:
         topic_type: finalData.type,
         ai_description: finalData.description,
         calculated_variables: finalData.variables,
-        data: finalData, // เก็บ data ทั้งก้อนไว้ให้ Sidebar ดึงไปใช้
-        createdAt: admin.firestore.FieldValue.serverTimestamp() 
-      });
+        data: finalData, // เก็บเพื่อให้รีเฟรชแล้ววาดบอลได้
+        createdAt: admin.firestore.FieldValue.serverTimestamp()
+      }).then(() => console.log("💾 บันทึกสำเร็จ")).catch(e => console.error(e));
     }
     res.json(finalData);
-  } catch (error) { res.status(500).json({ error: "Backend Error" }); }
+  } catch (error) {
+    res.status(500).json({ error: "Backend Error" });
+  }
 });
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, '0.0.0.0', () => console.log(`✅ Server รันที่: ${PORT}`));
+app.listen(PORT, '0.0.0.0', () => console.log(`✅ Port: ${PORT}`));
