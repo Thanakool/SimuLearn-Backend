@@ -92,8 +92,6 @@ AI:
       variables: {},
       description: jsonResponse.description
     };
-
-    // Logic คำนวณ (เหมือนเดิม)
     if (aiTopic === "projectile") {
         let speed = v.u ?? 0;
         let angleVal = v.theta?.value ?? 0;
@@ -145,4 +143,8 @@ AI:
 });
 
 const PORT = process.env.PORT || 5000;
+app.get('/api/ping', (req, res) => {
+  console.log("สถานะ: ยังตื่นอยู่");
+  res.json({ status: "alive", timestamp: new Date() });
+});
 app.listen(PORT, '0.0.0.0', () => console.log(`✅ Port: ${PORT}`));
