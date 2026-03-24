@@ -79,7 +79,22 @@ AI:
 `;
     let aiParts = [{ text: systemi }, { text: prompt ? `โจทย์คือ: ${prompt}` : "จงวิเคราะห์โจทย์" }];
     console.log("🤖 กำลังรอ AI วิเคราะห์โจทย์...");
-    const result = await model.generateContent(aiParts);
+    let result;
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        result = await model.generateContent(aiParts);
+        break; // สำเร็จ ออกจาก loop
+      } catch (aiErr) {
+        const is503 = aiErr?.message?.includes('503') || aiErr?.status === 503 || aiErr?.message?.includes('UNAVAILABLE');
+        console.log(`⚠️ Attempt ${attempt} failed: ${aiErr?.message}`);
+        if (is503 && attempt < 3) {
+          console.log(`🔁 Retrying in 2s...`);
+          await new Promise(r => setTimeout(r, 2000));
+        } else {
+          throw aiErr;
+        }
+      }
+    }
     let rawText = result.response.text();
     rawText = rawText.replace(/```json/gi, '').replace(/```/gi, '').trim();
     const jsonResponse = JSON.parse(rawText);
