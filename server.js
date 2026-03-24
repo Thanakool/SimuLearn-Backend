@@ -23,7 +23,7 @@ app.post('/api/generate-simulation', async (req, res) => {
     const { prompt, userId } = req.body; 
     console.log(`📩 New Request User: ${userId} | Prompt: ${prompt}`);
     const model = genAI.getGenerativeModel({ 
-      model: "gemini-3.1-flash-lite-preview", //MODEL gemini-3.1-flash-lite-preview
+      model: "gemini-2.0-flash", //MODEL gemini-2.0-flash
       generationConfig: { responseMimeType: "application/json" } 
     });
     const systemi = `
@@ -138,7 +138,9 @@ AI:
     }
     res.json(finalData);
   } catch (error) {
-    res.status(500).json({ error: "Backend Error" });
+    console.error("❌ Error:", error?.message || error);
+    console.error("❌ Error details:", JSON.stringify(error, null, 2));
+    res.status(500).json({ error: "Backend Error", detail: error?.message });
   }
 });
 
